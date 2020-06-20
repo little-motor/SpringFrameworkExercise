@@ -1,4 +1,6 @@
 package cn.littlemotor.mvcframework.servlet;
 
-public class DispatcherServlet {
+import javax.servlet.http.HttpServlet;
+
+public class DispatcherServlet extends HttpServlet {
 }
