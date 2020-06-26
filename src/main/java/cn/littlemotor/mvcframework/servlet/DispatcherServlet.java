@@ -1,9 +1,12 @@
 package cn.littlemotor.mvcframework.servlet;
 
+import cn.littlemotor.mvcframework.annotation.RequestParam;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -36,13 +39,33 @@ public class DispatcherServlet extends FrameworkServlet {
     String url = req.getRequestURI();
     String contextPath = req.getContextPath();
     url = url.replace(contextPath, "").replaceAll("/+", "/");
-    if (!this.ioc.containsKey(url)){
+    if (!this.handlerMapping.containsKey(url)){
       resp.getWriter().write("404 Not Found!");
       return;
     }
-    Method method = (Method) ioc.get(url);
-    Map<String, String[]> params = req.getParameterMap();
-    Object object = this.ioc.get(method.getDeclaringClass().getName());
-    method.invoke(object, req, resp, params.get("name")[0]);
+    Method method = handlerMapping.get(url);
+    Map<String, String[]> requestParamMap = req.getParameterMap();
+    Class<?>[] methodParameterTypes = method.getParameterTypes();
+    Object[] reflectParamValues = new Object[methodParameterTypes.length];
+    for (int i = 0; i < methodParameterTypes.length; i++){
+      Class parameterType = methodParameterTypes[i];
+      if (parameterType == HttpServletRequest.class) {
+        reflectParamValues[i] = req;
+        continue;
+      } else if (parameterType == HttpServletResponse.class) {
+        reflectParamValues[i] = resp;
+        continue;
+      } else if (parameterType == String.class) {
+        Annotation[][] annotations = method.getParameterAnnotations();
+        for (Annotation annotation : annotations[i]) {
+          if (annotation instanceof RequestParam){
+            String parameterName = ((RequestParam) annotation).value();
+            reflectParamValues[i] = Arrays.toString(requestParamMap.get(parameterName)).replaceAll("\\[|\\]", "");
+          }
+        }
+      }
+    }
+    Object object = this.ioc.get(firstLetterLowerCase(method.getDeclaringClass().getSimpleName()));
+    method.invoke(object, reflectParamValues);
   }
 }

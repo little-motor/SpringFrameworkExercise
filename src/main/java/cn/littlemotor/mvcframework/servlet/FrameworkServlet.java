@@ -38,6 +38,8 @@ public class FrameworkServlet extends HttpServlet {
 
     doAutoWired();
 
+    initHandlerMapping();
+
     System.out.println("MVC framework has inited");
   }
 
@@ -126,23 +128,26 @@ public class FrameworkServlet extends HttpServlet {
   }
 
   private void initHandlerMapping() {
-
-//    String baseUrl = "";
-//    if (clazz.isAnnotationPresent(RequestMapping.class)) {
-//      baseUrl = clazz.getAnnotation(RequestMapping.class).value();
-//    }
-//    Method[] methods = clazz.getMethods();
-//    for (Method method : methods) {
-//      if (!method.isAnnotationPresent(RequestMapping.class)) continue;
-//      String url = (baseUrl + method.getAnnotation(RequestMapping.class).value()).replaceAll("/+", "/");
-//      ioc.put(url, method);
-//      System.out.println("Mapped " + url + "," + method);
-//    }
-
-
+    if (ioc.isEmpty()) return;
+    for (Object instance : ioc.values()) {
+      Class<?> clazz = instance.getClass();
+      if (clazz.isAnnotationPresent(Controller.class)) {
+        String baseUrl = "";
+        if (clazz.isAnnotationPresent(RequestMapping.class)) {
+          baseUrl = clazz.getAnnotation(RequestMapping.class).value();
+        }
+        Method[] methods = clazz.getMethods();
+        for (Method method : methods) {
+          if (!method.isAnnotationPresent(RequestMapping.class)) continue;
+          String url = (baseUrl + "/" + method.getAnnotation(RequestMapping.class).value()).replaceAll("/+", "/");
+          handlerMapping.put(url, method);
+          System.out.println("Mapped " + url + "," + method);
+        }
+      }
+    }
   }
 
-  private String firstLetterLowerCase(String name) {
+  protected String firstLetterLowerCase(String name) {
     char[] chars = name.toCharArray();
     if (Objects.nonNull(chars) && (chars[0] >= 65 && chars[0] <= 90)) {
       chars[0] += 32;
